@@ -1,5 +1,5 @@
 # Binaries
-gooser
+/gooser
 *.test
 *.out
 
