@@ -3,27 +3,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/tools/clientcmd"
+	"github.com/ianeff/gooser/internal/gooser"
 	"k8s.io/client-go/util/homedir"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 )
-
-var applicationGVR = schema.GroupVersionResource{
-	Group:    "argoproj.io",
-	Version:  "v1alpha1",
-	Resource: "applications",
-}
 
 func main() {
 	if len(os.Args) > 2 {
@@ -45,59 +32,33 @@ func main() {
 	}
 	flag.Parse()
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	client, err := gooser.NewClient(*kubeconfig)
 	if err != nil {
-		panic(err.Error())
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	dynClient, err := dynamic.NewForConfig(config)
+	ctx := context.TODO()
+	apps, err := client.List(ctx)
 	if err != nil {
-		panic(err.Error())
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	appList, err := dynClient.Resource(applicationGVR).Namespace("argocd").List(
-		context.TODO(),
-		metav1.ListOptions{},
-	)
-	if err != nil {
-		panic(err.Error())
+	printApps(apps)
+
+	name := appName
+	if name == "" {
+		name, err = selectApp(apps)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 
-	fmt.Printf("Found %d Applications:\n", len(appList.Items))
-	for _, app := range appList.Items {
-		syncStatus, _, _ := unstructured.NestedString(app.Object, "status", "sync", "status")
-		healthStatus, _, _ := unstructured.NestedString(app.Object, "status", "health", "status")
-		fmt.Printf("\t- %-40s sync=%-12s health=%s\n", app.GetName(), syncStatus, healthStatus)
+	if err := client.Goose(ctx, name); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-
-	if appName == "" {
-		fmt.Println("No patch requested.")
-		return
-	}
-
-	patchPayload := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]string{
-				"argocd.argoproj.io/refresh": "hard",
-			},
-		},
-	}
-	patchBytes, err := json.Marshal(patchPayload)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	result, err := dynClient.Resource(applicationGVR).Namespace("argocd").Patch(
-		context.TODO(),
-		appName,
-		types.MergePatchType,
-		patchBytes,
-		metav1.PatchOptions{},
-	)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	fmt.Printf("Patched %s - annotations: %v\n", result.GetName(), result.GetAnnotations())
+	fmt.Printf("Goosed %s. 🪿\n", name)
 }
