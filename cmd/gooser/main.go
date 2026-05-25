@@ -60,4 +60,5 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	fmt.Printf("Goosed %s. 🪿\n", name)
 }
