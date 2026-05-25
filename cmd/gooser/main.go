@@ -49,11 +49,20 @@ func main() {
 
 	name := appName
 	if name == "" {
-		return
+		name, err = selectApp(apps)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 
 	if err := client.Goose(ctx, name); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+type appClient interface {
+	List(ctx context.Context) ([]gooser.Application, error)
+	Goose(ctx context.Context, name string) error
 }
