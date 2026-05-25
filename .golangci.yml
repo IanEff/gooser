@@ -1,0 +1,19 @@
+version: "2"
+
+linters:
+  enable:
+    - gosec
+    - godot
+    - misspell
+    - errorlint
+    - revive
+  settings:
+    staticcheck:
+      checks: ["all"]
+  exclusions:
+    warn-unused: true
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
