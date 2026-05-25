@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/ianeff/gooser/internal/gooser"
+	"github.com/ianeff/gooser/internal/tui"
 	"k8s.io/client-go/util/homedir"
 )
 
@@ -45,18 +46,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	printApps(apps)
-
 	name := appName
 	if name == "" {
-		name, err = selectApp(apps)
+		name, err = tui.Run(apps)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	}
 
-	if err := client.Goose(ctx, name); err != nil {
+	if err = client.Goose(ctx, name); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
