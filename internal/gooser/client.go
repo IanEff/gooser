@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -19,11 +19,13 @@ var applicationGVR = schema.GroupVersionResource{
 	Resource: "applications",
 }
 
+// Client wraps the Kubernetes dynamic client for ArgoCD application operations.
 type Client struct {
 	dyn dynamic.Interface
 	ns  string
 }
 
+// NewClient constructs a Client from a kubeconfig file path.
 func NewClient(kubeconfig string) (*Client, error) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -36,30 +38,36 @@ func NewClient(kubeconfig string) (*Client, error) {
 	return &Client{dyn: dyn, ns: "argocd"}, nil
 }
 
+// List returns all ArgoCD applications in the configured namespace.
 func (c *Client) List(ctx context.Context) ([]Application, error) {
 	apps := []Application{}
 
 	appList, err := c.dyn.Resource(applicationGVR).Namespace(c.ns).List(
-		context.TODO(),
+		ctx,
 		metav1.ListOptions{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list applications: %w", err)
 	}
 
-	for _, app := range appList.Items {
-		apps = append(apps, Application{
-			Name: app.GetName(),
-			// This also works: syncStatus, _, _ := unstructured.NestedString(app.Object, "status", "sync", "status")
-			// healthStatus, _, _ := unstructured.NestedString(app.Object, "status", "health", "status")
-			Sync:   app.GetAnnotations()["sync-status"],
-			Health: app.GetAnnotations()["health-status"],
-		})
+	for _, item := range appList.Items {
+		apps = append(apps, appFrom(item))
 	}
 
 	return apps, nil
 }
 
+func appFrom(u unstructured.Unstructured) Application {
+	sync, _, _ := unstructured.NestedString(u.Object, "status", "sync", "status")
+	health, _, _ := unstructured.NestedString(u.Object, "status", "health", "status")
+	return Application{
+		Name:   u.GetName(),
+		Sync:   sync,
+		Health: health,
+	}
+}
+
+// Goose triggers a hard refresh on the named ArgoCD application.
 func (c *Client) Goose(ctx context.Context, app string) error {
 	appResource := c.dyn.Resource(applicationGVR).Namespace(c.ns)
 
@@ -72,7 +80,7 @@ func (c *Client) Goose(ctx context.Context, app string) error {
 	}
 	patchBytes, err := json.Marshal(patchPayload)
 	if err != nil {
-		panic(err.Error())
+		return fmt.Errorf("cannot marshal patch: %w", err)
 	}
 	_, err = appResource.Patch(ctx, app, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 	if err != nil {

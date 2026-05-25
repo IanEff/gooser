@@ -61,8 +61,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-type appClient interface {
-	List(ctx context.Context) ([]gooser.Application, error)
-	Goose(ctx context.Context, name string) error
-}
