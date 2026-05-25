@@ -1,3 +1,4 @@
+// Gooser gooses apps, baby.
 package main
 
 import (
@@ -7,8 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	// The dynamic client — works with any k8s resource, typed or CRD
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/tools/clientcmd"

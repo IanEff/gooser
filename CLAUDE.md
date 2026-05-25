@@ -25,19 +25,19 @@ go test ./... -run TestFunctionName
 
 ## Architecture
 
-This is a single-binary CLI tool (`cmd/gooser/main.go`) with no sub-packages yet. The entry point uses `client-go` to load kubeconfig (`~/.kube/config` by default, overridable with `-kubeconfig`) and then connects to the ArgoCD API via the ArgoCD typed client (`github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned`).
+Single-binary CLI tool (`cmd/gooser/main.go`) with no sub-packages. The entry point:
 
-Current functionality:
-- **List applications**: queries the `argocd` namespace and prints each app's name, health status, and sync status.
-- **`patchApp`** (unexported, not yet wired to CLI): triggers a hard refresh on an ArgoCD app by patching the `argocd.argoproj.io/refresh: hard` annotation via a merge-patch.
+1. Reads a positional `[appname]` argument from `os.Args` (optional).
+2. Loads kubeconfig via `flag.String("kubeconfig", ...)` defaulting to `~/.kube/config`.
+3. Builds a `k8s.io/client-go/dynamic` client — intentionally generic, no ArgoCD SDK dependency.
+4. Lists all ArgoCD `Application` CRs in the `argocd` namespace via the `argoproj.io/v1alpha1/applications` GVR, printing name, sync status, and health status.
+5. If `appname` was provided, patches that application with the `argocd.argoproj.io/refresh: hard` annotation to trigger a hard refresh.
+
+The dynamic client approach (rather than the ArgoCD typed client) keeps the dependency tree light and avoids the transitive conflicts that come with `github.com/argoproj/argo-cd/v2`.
 
 ## Linting
 
 golangci-lint v2 config (`.golangci.yml`) enables: `gosec`, `godot`, `misspell`, `errorlint`, `revive`, plus `staticcheck` (all checks). Formatters: `gofmt` + `goimports`.
-
-## Known Issues
-
-`go_vulncheck` and `govulncheck ./...` fail to load packages due to a transitive dependency conflict: `argoproj/gitops-engine` mixes `sigs.k8s.io/structured-merge-diff` v4 and v6 types, and `k8s.io/kubernetes v1.31.0` references removed `v1alpha1` API packages. The main binary itself (`./cmd/gooser`) builds cleanly despite this.
 
 ## Scaffolding
 
