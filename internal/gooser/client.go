@@ -82,7 +82,7 @@ func (c *Client) Goose(ctx context.Context, app string) error {
 	if err != nil {
 		return fmt.Errorf("cannot marshal patch: %w", err)
 	}
-	_, err = appResource.Patch(ctx, app, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
+	_, err = appResource.Patch(ctx, app, types.MergePatchType, patchBytes, metav1.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("cannot patch application: %w", err)
 	}
