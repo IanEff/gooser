@@ -1,4 +1,4 @@
-module github.com/ifurst/gooser
+module github.com/ianeff/gooser
 
 go 1.26.0
 
