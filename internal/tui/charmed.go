@@ -1,22 +1,21 @@
+// Package tui provides a superslick charmbracelet-based TUI for the gooser's pleasure.
 package tui
 
 import (
 	"fmt"
 
-	tea "github.com/charmbracelet/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/ianeff/gooser/internal/gooser"
 )
 
 type model struct {
-	choices  []string
-	cursor   int
-	selected map[int]struct{}
+	apps   []gooser.Application
+	cursor int
 }
 
-func initialModel(apps ...string) model {
+func initialModel(apps []gooser.Application) model {
 	return model{
-		choices:  apps,
-		selected: make(map[int]struct{}),
+		apps: apps,
 	}
 }
 
@@ -36,16 +35,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
+			if m.cursor < len(m.apps)-1 {
 				m.cursor++
 			}
-		case "enter", "space":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = struct{}{}
-			}
+		case "enter":
+			return m, tea.Quit
 		}
 	}
 
@@ -55,28 +49,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() tea.View {
 	s := "Select an app to GOOSE\n\n"
 
-	for i, choice := range m.choices {
+	for i, app := range m.apps {
 		cursor := " "
 		if m.cursor == i {
 			cursor = ">"
 		}
-		checked := " "
-		if _, ok := m.selected[i]; ok {
-			checked = "x"
-		}
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+		s += fmt.Sprintf("%s %-40s sync=%-12s health=%s\n", cursor, app.Name, app.Sync, app.Health)
 	}
-	s += "\nPress q to quit.\n"
+	s += "\nPress enter to goose, q to quit.\n"
 
 	return tea.NewView(s)
 }
 
+// Run starts the TUI and returns the name of the app the user selected.
 func Run(apps []gooser.Application) (string, error) {
-	names := make([]string, len(apps))
-	for i, a := range apps {
-		names[i] = a.Name
-	}
-	m := initialModel(names...)
+	m := initialModel(apps)
 	p := tea.NewProgram(m)
 	finalModel, err := p.Run()
 	if err != nil {
@@ -85,8 +72,5 @@ func Run(apps []gooser.Application) (string, error) {
 
 	result := finalModel.(model)
 
-	for idx := range result.selected {
-		return result.choices[idx], nil
-	}
-	return "", fmt.Errorf("no app selected")
+	return result.apps[result.cursor].Name, nil
 }

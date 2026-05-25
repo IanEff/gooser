@@ -46,9 +46,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	name, err := tui.Run(apps)
+	name := appName
+	if name == "" {
+		name, err = tui.Run(apps)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
 
-	if err := client.Goose(ctx, name); err != nil {
+	if err = client.Goose(ctx, name); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
