@@ -2,19 +2,53 @@ name: release
 
 # Tag-gated: the deliberate "ship" act. Ordinary pushes to main run CI only;
 # pushing a v* tag cuts a signed, SBOM'd GitHub release. (deploy != release)
+#
+# The release job is gated behind `verify` (needs:) — the same quality gates
+# as ci.yml. A v* tag will NOT publish a release unless fmt/vet/lint/test pass.
+# This is Holmes's `needs: build` gate (Shipping Go ch8), restored after the
+# split into a separate tag-triggered workflow dropped the dependency.
 on:
   push:
     tags:
       - "v*"
 
+# Least privilege by default; only the release job gets write + OIDC.
 permissions:
-  contents: write # create the release object + upload assets
-  id-token: write # keyless cosign signing via GitHub OIDC
+  contents: read
 
 jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: fmt-check
+        run: make fmt-check
+
+      - name: vet
+        run: make vet
+
+      - name: lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+
+      - name: test
+        run: make test
+
   release:
     name: release
+    needs: verify # the gate: no release unless the quality checks pass
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release object + upload assets
+      id-token: write # keyless cosign signing via GitHub OIDC
     steps:
       - uses: actions/checkout@v6
         with:
