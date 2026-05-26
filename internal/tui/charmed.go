@@ -8,6 +8,22 @@ import (
 	"github.com/ianeff/gooser/internal/gooser"
 )
 
+// Action represents the action to perform on an Application.
+type Action int
+
+// These Actions are the verbs available to the user.
+const (
+	ActionGoose Action = iota
+	ActionTwiddleOn
+	ActionTwiddleOff
+)
+
+// Result holds the result of a TUI selection.
+type Result struct {
+	Application string
+	Action      Action
+}
+
 type model struct {
 	apps   []gooser.Application
 	cursor int
@@ -59,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	s := "Select an app to [g]oose, or [t]widdle sync policy on, or [o]ff, or just [q]uit.\n\n"
+	s := "[Gooser]\n\n"
 
 	for i, app := range m.apps {
 		cursor := " "
@@ -68,12 +84,12 @@ func (m model) View() tea.View {
 		}
 		s += fmt.Sprintf("%s %-40s sync=%-12s health=%s\n", cursor, app.Name, app.Sync, app.Health)
 	}
-	s += "\nPress enter to goose, t to twiddle syncPolicy on, o to twiddle syncPolicy off, or q to quit.\n"
+	s += "\nSelect an Application to [g]oose, [t]widdle syncPolicy on, twiddle the syncPolicy [o]ff for maintenance mode, or [q]uit.\n"
 
 	return tea.NewView(s)
 }
 
-// Run starts the TUI and returns the name of the app the user selected.
+// Run starts the TUI and returns the Result of the user's selection.
 func Run(apps []gooser.Application) (Result, error) {
 	m := initialModel(apps)
 	p := tea.NewProgram(m)
@@ -87,22 +103,4 @@ func Run(apps []gooser.Application) (Result, error) {
 		Application: final.apps[final.cursor].Name,
 		Action:      final.result.Action,
 	}, nil
-}
-
-// Action represents the action to perform on an Application.
-type Action int
-
-// ActionGoose represents the action to goose an Application.
-// ActionTwiddleOn represents the action to enable sync policy for an Application.
-// ActionTwiddleOff represents the action to disable sync policy for an Application.
-const (
-	ActionGoose Action = iota
-	ActionTwiddleOn
-	ActionTwiddleOff
-)
-
-// Result holds the result of a TUI selection.
-type Result struct {
-	Application string
-	Action      Action
 }
