@@ -2,7 +2,7 @@
 package tui
 
 import (
-	"fmt"
+	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/ianeff/gooser/internal/gooser"
@@ -25,9 +25,10 @@ type Result struct {
 }
 
 type model struct {
-	apps   []gooser.Application
-	cursor int
-	result Result
+	apps     []gooser.Application
+	cursor   int
+	result   Result
+	quitting bool
 }
 
 func initialModel(apps []gooser.Application) model {
@@ -46,6 +47,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
+			m.quitting = true
 			return m, tea.Quit
 		case "up", "k":
 			if m.cursor > 0 {
@@ -58,15 +60,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter", "g":
 			m.result.Application = m.apps[m.cursor].Name
 			m.result.Action = ActionGoose
+			m.quitting = true
 			return m, tea.Quit
 
 		case "t":
 			m.result.Application = m.apps[m.cursor].Name
 			m.result.Action = ActionTwiddleOn
+			m.quitting = true
 			return m, tea.Quit
 		case "o":
 			m.result.Application = m.apps[m.cursor].Name
 			m.result.Action = ActionTwiddleOff
+			m.quitting = true
 			return m, tea.Quit
 		}
 	}
@@ -75,18 +80,52 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	s := "🪿 Gooser — ArgoCD applications\n\n"
+	if m.quitting {
+		return tea.NewView("")
+	}
+
+	var sb strings.Builder
+
+	sb.WriteString(titleStyle.Render("🪿 Gooser — ArgoCD applications"))
+	sb.WriteString("\n")
 
 	for i, app := range m.apps {
-		cursor := " "
+		cursor := "  "
 		if m.cursor == i {
-			cursor = ">"
+			cursor = cursorStyle.Render("❯") + " "
 		}
-		s += fmt.Sprintf("%s %-40s sync=%-12s health=%s\n", cursor, app.Name, app.Sync, app.Health)
-	}
-	s += "\nSelect an Application to [g]oose, [t]widdle syncPolicy on, twiddle the syncPolicy [o]ff for maintenance mode, or [q]uit.\n"
 
-	return tea.NewView(s)
+		var name string
+		if m.cursor == i {
+			name = selectedNameStyle.Render(app.Name)
+		} else {
+			name = nameStyle.Render(app.Name)
+		}
+
+		sb.WriteString(cursor)
+		sb.WriteString(name)
+		sb.WriteString(labelStyle.Render("sync="))
+		sb.WriteString(syncCell(app.Sync))
+		sb.WriteString("  ")
+		sb.WriteString(labelStyle.Render("health="))
+		sb.WriteString(healthCell(app.Health))
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(
+		hintStyle.Render("Select an application to [") +
+			keyStyle.Render("g") +
+			hintStyle.Render("]oose · [") +
+			keyStyle.Render("t") +
+			hintStyle.Render("]widdle on · twiddle [") +
+			keyStyle.Render("o") +
+			hintStyle.Render("]ff · [") +
+			keyStyle.Render("q") +
+			hintStyle.Render("]uit"),
+	)
+
+	return tea.NewView(borderStyle.Render(sb.String()))
 }
 
 // Run starts the TUI and returns the Result of the user's selection.
