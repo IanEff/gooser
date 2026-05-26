@@ -1,7 +1,9 @@
 # gooser 🪿
 
-Trigger a hard refresh on an ArgoCD application without the ArgoCD CLI, the ArgoCD SDK,
-or any of the transitive dependency chaos that comes with them.
+A little cli app to goose ArgoCD to refresh Applications when your gRPC connection's
+acting flaky.  Pulls your default local kubeconfig.
+
+For ephemeral clusters and impatient people.
 
 ```
 gooser              # pick an app from the TUI, goose it
