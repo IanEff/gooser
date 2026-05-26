@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	charm.land/bubbletea/v2 v2.0.6
+	charm.land/lipgloss/v2 v2.0.3
 	k8s.io/apimachinery v0.36.1
 	k8s.io/client-go v0.36.1
 )
