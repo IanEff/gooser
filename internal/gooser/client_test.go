@@ -35,6 +35,36 @@ func makeApp(name, sync, health string) *unstructured.Unstructured {
 	}
 }
 
+// firstPatch returns the first PatchAction recorded by a fake dynamic client, or nil.
+func firstPatch(fd *fake.FakeDynamicClient) k8stesting.PatchAction {
+	for _, action := range fd.Actions() {
+		if pa, ok := action.(k8stesting.PatchAction); ok {
+			return pa
+		}
+	}
+	return nil
+}
+
+// assertSyncPolicy unmarshals a MergePatch body and verifies that
+// spec.syncPolicy.automated.{selfHeal,prune} both equal want.
+func assertSyncPolicy(t *testing.T, patch []byte, want bool) {
+	t.Helper()
+	var body map[string]interface{}
+	if err := json.Unmarshal(patch, &body); err != nil {
+		t.Fatalf("unmarshal patch body: %v", err)
+	}
+	for _, field := range []string{"selfHeal", "prune"} {
+		got, ok, err := unstructured.NestedBool(body, "spec", "syncPolicy", "automated", field)
+		if err != nil || !ok {
+			t.Errorf("spec.syncPolicy.automated.%s missing from patch", field)
+			continue
+		}
+		if got != want {
+			t.Errorf("spec.syncPolicy.automated.%s = %v, want %v", field, got, want)
+		}
+	}
+}
+
 // fakeClient returns a *Client backed by a fake dynamic client pre-loaded with apps.
 func fakeClient(apps ...*unstructured.Unstructured) *Client {
 	scheme := runtime.NewScheme()
@@ -166,6 +196,20 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestListError(t *testing.T) {
+	t.Run("propagates API errors", func(t *testing.T) {
+		c := fakeClient()
+		c.dyn.(*fake.FakeDynamicClient).PrependReactor("list", "applications",
+			func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errInjected
+			},
+		)
+		if _, err := c.List(context.Background()); err == nil {
+			t.Fatal("List() expected error, got nil")
+		}
+	})
+}
+
 func TestGoose(t *testing.T) {
 	t.Run("sends merge patch with hard refresh annotation", func(t *testing.T) {
 		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
@@ -174,19 +218,10 @@ func TestGoose(t *testing.T) {
 			t.Fatalf("Goose() unexpected error: %v", err)
 		}
 
-		// Inspect the recorded actions rather than trusting fake patch application.
-		fakeDyn := c.dyn.(*fake.FakeDynamicClient)
-		var pa k8stesting.PatchAction
-		for _, action := range fakeDyn.Actions() {
-			if p, ok := action.(k8stesting.PatchAction); ok {
-				pa = p
-				break
-			}
-		}
+		pa := firstPatch(c.dyn.(*fake.FakeDynamicClient))
 		if pa == nil {
 			t.Fatal("no patch action recorded")
 		}
-
 		if pa.GetPatchType() != types.MergePatchType {
 			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
 		}
@@ -211,6 +246,68 @@ func TestGoose(t *testing.T) {
 		)
 		if err := c.Goose(context.Background(), "my-app"); err == nil {
 			t.Fatal("Goose() expected error, got nil")
+		}
+	})
+}
+
+func TestTwiddleOn(t *testing.T) {
+	t.Run("sends merge patch enabling selfHeal and prune", func(t *testing.T) {
+		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+
+		if err := c.TwiddleOn(context.Background(), "my-app"); err != nil {
+			t.Fatalf("TwiddleOn() unexpected error: %v", err)
+		}
+
+		pa := firstPatch(c.dyn.(*fake.FakeDynamicClient))
+		if pa == nil {
+			t.Fatal("no patch action recorded")
+		}
+		if pa.GetPatchType() != types.MergePatchType {
+			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
+		}
+		assertSyncPolicy(t, pa.GetPatch(), true)
+	})
+
+	t.Run("propagates API errors", func(t *testing.T) {
+		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+		c.dyn.(*fake.FakeDynamicClient).PrependReactor("patch", "applications",
+			func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errInjected
+			},
+		)
+		if err := c.TwiddleOn(context.Background(), "my-app"); err == nil {
+			t.Fatal("TwiddleOn() expected error, got nil")
+		}
+	})
+}
+
+func TestTwiddleOff(t *testing.T) {
+	t.Run("sends merge patch disabling selfHeal and prune", func(t *testing.T) {
+		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+
+		if err := c.TwiddleOff(context.Background(), "my-app"); err != nil {
+			t.Fatalf("TwiddleOff() unexpected error: %v", err)
+		}
+
+		pa := firstPatch(c.dyn.(*fake.FakeDynamicClient))
+		if pa == nil {
+			t.Fatal("no patch action recorded")
+		}
+		if pa.GetPatchType() != types.MergePatchType {
+			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
+		}
+		assertSyncPolicy(t, pa.GetPatch(), false)
+	})
+
+	t.Run("propagates API errors", func(t *testing.T) {
+		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+		c.dyn.(*fake.FakeDynamicClient).PrependReactor("patch", "applications",
+			func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errInjected
+			},
+		)
+		if err := c.TwiddleOff(context.Background(), "my-app"); err == nil {
+			t.Fatal("TwiddleOff() expected error, got nil")
 		}
 	})
 }
