@@ -8,9 +8,26 @@ import (
 	"github.com/ianeff/gooser/internal/gooser"
 )
 
+// Action represents the action to perform on an Application.
+type Action int
+
+// These Actions are the verbs available to the user.
+const (
+	ActionGoose Action = iota
+	ActionTwiddleOn
+	ActionTwiddleOff
+)
+
+// Result holds the result of a TUI selection.
+type Result struct {
+	Application string
+	Action      Action
+}
+
 type model struct {
 	apps   []gooser.Application
 	cursor int
+	result Result
 }
 
 func initialModel(apps []gooser.Application) model {
@@ -38,7 +55,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.apps)-1 {
 				m.cursor++
 			}
-		case "enter":
+		case "enter", "g":
+			m.result.Application = m.apps[m.cursor].Name
+			m.result.Action = ActionGoose
+			return m, tea.Quit
+
+		case "t":
+			m.result.Application = m.apps[m.cursor].Name
+			m.result.Action = ActionTwiddleOn
+			return m, tea.Quit
+		case "o":
+			m.result.Application = m.apps[m.cursor].Name
+			m.result.Action = ActionTwiddleOff
 			return m, tea.Quit
 		}
 	}
@@ -47,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	s := "Select an app to GOOSE\n\n"
+	s := "🪿 Gooser — ArgoCD applications\n\n"
 
 	for i, app := range m.apps {
 		cursor := " "
@@ -56,21 +84,23 @@ func (m model) View() tea.View {
 		}
 		s += fmt.Sprintf("%s %-40s sync=%-12s health=%s\n", cursor, app.Name, app.Sync, app.Health)
 	}
-	s += "\nPress enter to goose, q to quit.\n"
+	s += "\nSelect an Application to [g]oose, [t]widdle syncPolicy on, twiddle the syncPolicy [o]ff for maintenance mode, or [q]uit.\n"
 
 	return tea.NewView(s)
 }
 
-// Run starts the TUI and returns the name of the app the user selected.
-func Run(apps []gooser.Application) (string, error) {
+// Run starts the TUI and returns the Result of the user's selection.
+func Run(apps []gooser.Application) (Result, error) {
 	m := initialModel(apps)
 	p := tea.NewProgram(m)
 	finalModel, err := p.Run()
 	if err != nil {
-		return "", err
+		return Result{}, err
 	}
 
-	result := finalModel.(model)
-
-	return result.apps[result.cursor].Name, nil
+	final := finalModel.(model)
+	return Result{
+		Application: final.result.Application,
+		Action:      final.result.Action,
+	}, nil
 }
