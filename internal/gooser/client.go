@@ -88,3 +88,37 @@ func (c *Client) Goose(ctx context.Context, app string) error {
 	}
 	return nil
 }
+
+// TwiddleOn enables sync policy for the named ArgoCD application.
+func (c *Client) TwiddleOn(ctx context.Context, app string) error {
+	return c.setSyncPolicy(ctx, app, true)
+}
+
+// TwiddleOff disables sync policy for the named ArgoCD application.
+func (c *Client) TwiddleOff(ctx context.Context, app string) error {
+	return c.setSyncPolicy(ctx, app, false)
+}
+
+func (c *Client) setSyncPolicy(ctx context.Context, app string, enabled bool) error {
+	appResource := c.dyn.Resource(applicationGVR).Namespace(c.ns)
+
+	patchPayload := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"syncPolicy": map[string]interface{}{
+				"automated": map[string]interface{}{
+					"selfHeal": enabled,
+					"prune":    enabled,
+				},
+			},
+		},
+	}
+	patchBytes, err := json.Marshal(patchPayload)
+	if err != nil {
+		return fmt.Errorf("cannot marshal patch: %w", err)
+	}
+	_, err = appResource.Patch(ctx, app, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot patch application: %w", err)
+	}
+	return nil
+}

@@ -48,16 +48,31 @@ func main() {
 
 	name := appName
 	if name == "" {
-		name, err = tui.Run(apps)
+		result, err := tui.Run(apps)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		switch result.Action {
+		case tui.ActionGoose:
+			err = client.Goose(ctx, apps[0].Name)
+			fmt.Printf("Goosed %s. 🪿\n", name)
+		case tui.ActionTwiddleOn:
+			err = client.TwiddleOn(ctx, apps[0].Name)
+			fmt.Printf("Twiddled %s. 🪿\n", name)
+		case tui.ActionTwiddleOff:
+			err = client.TwiddleOff(ctx, apps[0].Name)
+			fmt.Printf("Twiddled %s. 🪿\n", name)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	} else {
+		if err = client.Goose(ctx, name); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Goosed %s. 🪿\n", name)
 	}
-
-	if err = client.Goose(ctx, name); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	fmt.Printf("Goosed %s. 🪿\n", name)
 }
