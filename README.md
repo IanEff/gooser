@@ -5,6 +5,9 @@ acting flaky.  Pulls your default local kubeconfig.
 
 For ephemeral clusters and impatient people.
 
+Now with twiddling support: turn off yer sync polic options for maintenance or screwin'
+around, turn 'em back on once you're through!
+
 ```
 gooser              # pick an app from the TUI, goose it
 gooser my-app       # skip the TUI, goose it directly
