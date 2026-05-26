@@ -13,6 +13,14 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+// Stamped at link time via -ldflags "-X main.version=… -X main.commit=… -X main.date=…".
+// GoReleaser and the Makefile both set these; the defaults apply to `go build`/`go run`.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if len(os.Args) > 2 {
 		fmt.Println("Usage: gooser [appname]")
@@ -23,6 +31,12 @@ func main() {
 	appName := ""
 	if len(os.Args) == 2 {
 		appName = os.Args[1]
+	}
+
+	switch appName {
+	case "version", "--version", "-v":
+		fmt.Printf("gooser %s (commit %s, built %s)\n", version, commit, date)
+		return
 	}
 
 	var kubeconfig *string

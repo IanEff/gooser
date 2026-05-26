@@ -13,3 +13,6 @@ coverage.*
 
 # Build output
 bin/
+
+# GoReleaser
+dist/

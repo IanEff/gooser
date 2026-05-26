@@ -37,3 +37,38 @@ jobs:
 
       - name: build
         run: make build
+
+  snapshot:
+    name: snapshot-artifacts
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: anchore/sbom-action/download-syft@v0
+
+      # Exercises the full .goreleaser.yaml on every CI run (catches config
+      # drift before a tag is cut) and produces cross-platform binaries.
+      # --skip=sign: keyless cosign needs the OIDC token only the tag-gated
+      # release job is granted (id-token: write).
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean --skip=sign
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gooser-snapshot-${{ github.sha }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sbom.json
+            dist/checksums.txt
+          if-no-files-found: error
+          retention-days: 14
