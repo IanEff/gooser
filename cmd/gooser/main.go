@@ -46,33 +46,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	name := appName
-	if name == "" {
-		result, err := tui.Run(apps)
+	result := tui.Result{Application: appName, Action: tui.ActionGoose}
+	if appName == "" {
+		result, err = tui.Run(apps)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		switch result.Action {
-		case tui.ActionGoose:
-			err = client.Goose(ctx, result.Application)
-			fmt.Printf("Goosed %s. 🪿\n", result.Application)
-		case tui.ActionTwiddleOn:
-			err = client.TwiddleOn(ctx, result.Application)
-			fmt.Printf("Enabled auto-sync for %s.\n", result.Application)
-		case tui.ActionTwiddleOff:
-			err = client.TwiddleOff(ctx, result.Application)
-			fmt.Printf("Disabled auto-sync for %s.\n", result.Application)
-		}
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	} else {
-		if err = client.Goose(ctx, name); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		fmt.Printf("Goosed %s. 🪿\n", name)
+	}
+
+	switch result.Action {
+	case tui.ActionGoose:
+		err = client.Goose(ctx, result.Application)
+		fmt.Printf("Goosed %s. 🪿\n", result.Application)
+	case tui.ActionTwiddleOn:
+		err = client.TwiddleOn(ctx, result.Application)
+		fmt.Printf("Enabled auto-sync for %s.\n", result.Application)
+	case tui.ActionTwiddleOff:
+		err = client.TwiddleOff(ctx, result.Application)
+		fmt.Printf("Disabled auto-sync for %s.\n", result.Application)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }

@@ -75,7 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	s := "[Gooser]\n\n"
+	s := "🪿 Gooser — ArgoCD applications\n\n"
 
 	for i, app := range m.apps {
 		cursor := " "
@@ -100,7 +100,7 @@ func Run(apps []gooser.Application) (Result, error) {
 
 	final := finalModel.(model)
 	return Result{
-		Application: final.apps[final.cursor].Name,
+		Application: final.result.Application,
 		Action:      final.result.Action,
 	}, nil
 }
