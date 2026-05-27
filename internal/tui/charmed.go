@@ -14,8 +14,7 @@ type Action int
 // These Actions are the verbs available to the user.
 const (
 	ActionGoose Action = iota
-	ActionTwiddleOn
-	ActionTwiddleOff
+	ActionTwiddle
 )
 
 // Result holds the result of a TUI selection.
@@ -65,12 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "t":
 			m.result.Application = m.apps[m.cursor].Name
-			m.result.Action = ActionTwiddleOn
-			m.quitting = true
-			return m, tea.Quit
-		case "o":
-			m.result.Application = m.apps[m.cursor].Name
-			m.result.Action = ActionTwiddleOff
+			m.result.Action = ActionTwiddle
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -118,9 +112,7 @@ func (m model) View() tea.View {
 			keyStyle.Render("g") +
 			hintStyle.Render("]oose · [") +
 			keyStyle.Render("t") +
-			hintStyle.Render("]widdle on · twiddle [") +
-			keyStyle.Render("o") +
-			hintStyle.Render("]ff · [") +
+			hintStyle.Render("]widdle auto-sync · [") +
 			keyStyle.Render("q") +
 			hintStyle.Render("]uit"),
 	)

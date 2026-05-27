@@ -110,8 +110,7 @@ func TestUpdate_Actions(t *testing.T) {
 	}{
 		{"g", ActionGoose},
 		{"enter", ActionGoose},
-		{"t", ActionTwiddleOn},
-		{"o", ActionTwiddleOff},
+		{"t", ActionTwiddle},
 	}
 
 	for _, tt := range tests {

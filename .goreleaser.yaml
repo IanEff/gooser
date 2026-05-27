@@ -27,7 +27,8 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w
+      # Strip symbols if you've gotta...
+      # - -s -w
       - -X main.version={{ .Version }}
       - -X main.commit={{ .Commit }}
       - -X main.date={{ .CommitDate }}

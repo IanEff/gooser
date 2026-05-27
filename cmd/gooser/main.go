@@ -73,12 +73,14 @@ func main() {
 	case tui.ActionGoose:
 		err = client.Goose(ctx, result.Application)
 		fmt.Printf("Goosed %s. 🪿\n", result.Application)
-	case tui.ActionTwiddleOn:
-		err = client.TwiddleOn(ctx, result.Application)
-		fmt.Printf("Enabled auto-sync for %s.\n", result.Application)
-	case tui.ActionTwiddleOff:
-		err = client.TwiddleOff(ctx, result.Application)
-		fmt.Printf("Disabled auto-sync for %s.\n", result.Application)
+	case tui.ActionTwiddle:
+		var enabled bool
+		enabled, err = client.Twiddle(ctx, result.Application)
+		verb := "Disabled"
+		if enabled {
+			verb = "Enabled"
+		}
+		fmt.Printf("%s auto-sync for %s.\n", verb, result.Application)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

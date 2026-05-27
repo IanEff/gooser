@@ -89,36 +89,39 @@ func (c *Client) Goose(ctx context.Context, app string) error {
 	return nil
 }
 
-// TwiddleOn enables sync policy for the named ArgoCD application.
-func (c *Client) TwiddleOn(ctx context.Context, app string) error {
-	return c.setSyncPolicy(ctx, app, true)
-}
-
-// TwiddleOff disables sync policy for the named ArgoCD application.
-func (c *Client) TwiddleOff(ctx context.Context, app string) error {
-	return c.setSyncPolicy(ctx, app, false)
-}
-
-func (c *Client) setSyncPolicy(ctx context.Context, app string, enabled bool) error {
+// Twiddle toggles automated sync policy for the named ArgoCD application,
+// reading the current state from the resource and returning the new state
+// (true means automated sync is now enabled).
+func (c *Client) Twiddle(ctx context.Context, app string) (bool, error) {
 	appResource := c.dyn.Resource(applicationGVR).Namespace(c.ns)
+
+	current, err := appResource.Get(ctx, app, metav1.GetOptions{})
+	if err != nil {
+		return false, fmt.Errorf("cannot get application: %w", err)
+	}
+	_, wasEnabled, err := unstructured.NestedMap(current.Object, "spec", "syncPolicy", "automated")
+	if err != nil {
+		return false, fmt.Errorf("cannot read sync policy: %w", err)
+	}
+
+	var automated interface{}
+	if !wasEnabled {
+		automated = map[string]interface{}{"selfHeal": true, "prune": true}
+	} // else: nil — MergePatch with null removes the field, disabling auto-sync.
 
 	patchPayload := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"syncPolicy": map[string]interface{}{
-				"automated": map[string]interface{}{
-					"selfHeal": enabled,
-					"prune":    enabled,
-				},
+				"automated": automated,
 			},
 		},
 	}
 	patchBytes, err := json.Marshal(patchPayload)
 	if err != nil {
-		return fmt.Errorf("cannot marshal patch: %w", err)
+		return false, fmt.Errorf("cannot marshal patch: %w", err)
 	}
-	_, err = appResource.Patch(ctx, app, types.MergePatchType, patchBytes, metav1.PatchOptions{})
-	if err != nil {
-		return fmt.Errorf("cannot patch application: %w", err)
+	if _, err = appResource.Patch(ctx, app, types.MergePatchType, patchBytes, metav1.PatchOptions{}); err != nil {
+		return false, fmt.Errorf("cannot patch application: %w", err)
 	}
-	return nil
+	return !wasEnabled, nil
 }

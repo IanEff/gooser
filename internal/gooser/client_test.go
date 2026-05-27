@@ -3,6 +3,7 @@ package gooser
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"errors"
@@ -45,24 +46,15 @@ func firstPatch(fd *fake.FakeDynamicClient) k8stesting.PatchAction {
 	return nil
 }
 
-// assertSyncPolicy unmarshals a MergePatch body and verifies that
-// spec.syncPolicy.automated.{selfHeal,prune} both equal want.
-func assertSyncPolicy(t *testing.T, patch []byte, want bool) {
-	t.Helper()
-	var body map[string]interface{}
-	if err := json.Unmarshal(patch, &body); err != nil {
-		t.Fatalf("unmarshal patch body: %v", err)
-	}
-	for _, field := range []string{"selfHeal", "prune"} {
-		got, ok, err := unstructured.NestedBool(body, "spec", "syncPolicy", "automated", field)
-		if err != nil || !ok {
-			t.Errorf("spec.syncPolicy.automated.%s missing from patch", field)
-			continue
-		}
-		if got != want {
-			t.Errorf("spec.syncPolicy.automated.%s = %v, want %v", field, got, want)
-		}
-	}
+// appWithAutoSync builds an Application whose spec.syncPolicy.automated is set,
+// i.e. auto-sync is currently enabled.
+func appWithAutoSync(name string) *unstructured.Unstructured {
+	u := makeApp(name, "Synced", "Healthy")
+	_ = unstructured.SetNestedMap(u.Object, map[string]interface{}{
+		"selfHeal": true,
+		"prune":    true,
+	}, "spec", "syncPolicy", "automated")
+	return u
 }
 
 // fakeClient returns a *Client backed by a fake dynamic client pre-loaded with apps.
@@ -250,12 +242,16 @@ func TestGoose(t *testing.T) {
 	})
 }
 
-func TestTwiddleOn(t *testing.T) {
-	t.Run("sends merge patch enabling selfHeal and prune", func(t *testing.T) {
+func TestTwiddle(t *testing.T) {
+	t.Run("when auto-sync is off, patch enables selfHeal and prune and returns true", func(t *testing.T) {
 		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
 
-		if err := c.TwiddleOn(context.Background(), "my-app"); err != nil {
-			t.Fatalf("TwiddleOn() unexpected error: %v", err)
+		enabled, err := c.Twiddle(context.Background(), "my-app")
+		if err != nil {
+			t.Fatalf("Twiddle() unexpected error: %v", err)
+		}
+		if !enabled {
+			t.Errorf("Twiddle() returned enabled=false, want true")
 		}
 
 		pa := firstPatch(c.dyn.(*fake.FakeDynamicClient))
@@ -265,49 +261,67 @@ func TestTwiddleOn(t *testing.T) {
 		if pa.GetPatchType() != types.MergePatchType {
 			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
 		}
-		assertSyncPolicy(t, pa.GetPatch(), true)
-	})
 
-	t.Run("propagates API errors", func(t *testing.T) {
-		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
-		c.dyn.(*fake.FakeDynamicClient).PrependReactor("patch", "applications",
-			func(k8stesting.Action) (bool, runtime.Object, error) {
-				return true, nil, errInjected
-			},
-		)
-		if err := c.TwiddleOn(context.Background(), "my-app"); err == nil {
-			t.Fatal("TwiddleOn() expected error, got nil")
+		var body map[string]interface{}
+		if err := json.Unmarshal(pa.GetPatch(), &body); err != nil {
+			t.Fatalf("unmarshal patch body: %v", err)
+		}
+		for _, field := range []string{"selfHeal", "prune"} {
+			got, ok, err := unstructured.NestedBool(body, "spec", "syncPolicy", "automated", field)
+			if err != nil || !ok {
+				t.Errorf("spec.syncPolicy.automated.%s missing from patch", field)
+				continue
+			}
+			if !got {
+				t.Errorf("spec.syncPolicy.automated.%s = false, want true", field)
+			}
 		}
 	})
-}
 
-func TestTwiddleOff(t *testing.T) {
-	t.Run("sends merge patch disabling selfHeal and prune", func(t *testing.T) {
-		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+	t.Run("when auto-sync is on, patch clears automated and returns false", func(t *testing.T) {
+		c := fakeClient(appWithAutoSync("my-app"))
 
-		if err := c.TwiddleOff(context.Background(), "my-app"); err != nil {
-			t.Fatalf("TwiddleOff() unexpected error: %v", err)
+		enabled, err := c.Twiddle(context.Background(), "my-app")
+		if err != nil {
+			t.Fatalf("Twiddle() unexpected error: %v", err)
+		}
+		if enabled {
+			t.Errorf("Twiddle() returned enabled=true, want false")
 		}
 
 		pa := firstPatch(c.dyn.(*fake.FakeDynamicClient))
 		if pa == nil {
 			t.Fatal("no patch action recorded")
 		}
-		if pa.GetPatchType() != types.MergePatchType {
-			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
+
+		// MergePatch with a null value removes the field; assert the raw JSON
+		// contains "automated":null rather than an object.
+		if got := string(pa.GetPatch()); !strings.Contains(got, `"automated":null`) {
+			t.Errorf("patch body = %s, want it to contain \"automated\":null", got)
 		}
-		assertSyncPolicy(t, pa.GetPatch(), false)
 	})
 
-	t.Run("propagates API errors", func(t *testing.T) {
+	t.Run("propagates Get errors", func(t *testing.T) {
+		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
+		c.dyn.(*fake.FakeDynamicClient).PrependReactor("get", "applications",
+			func(k8stesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errInjected
+			},
+		)
+		if _, err := c.Twiddle(context.Background(), "my-app"); err == nil {
+			t.Fatal("Twiddle() expected error, got nil")
+		}
+	})
+
+	t.Run("propagates Patch errors", func(t *testing.T) {
 		c := fakeClient(makeApp("my-app", "Synced", "Healthy"))
 		c.dyn.(*fake.FakeDynamicClient).PrependReactor("patch", "applications",
 			func(k8stesting.Action) (bool, runtime.Object, error) {
 				return true, nil, errInjected
 			},
 		)
-		if err := c.TwiddleOff(context.Background(), "my-app"); err == nil {
-			t.Fatal("TwiddleOff() expected error, got nil")
+		if _, err := c.Twiddle(context.Background(), "my-app"); err == nil {
+			t.Fatal("Twiddle() expected error, got nil")
 		}
 	})
 }
