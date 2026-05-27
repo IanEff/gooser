@@ -16,6 +16,7 @@ make fmt-check    # fails if any files are unformatted
 make vet          # go vet ./...
 make ci           # fmt-check → vet → lint → test → build (full pipeline, matches GitHub Actions)
 make tidy         # go mod tidy
+make clean        # removes bin/ and coverage.out
 ```
 
 Run a single test:
@@ -25,15 +26,44 @@ go test ./... -run TestFunctionName
 
 ## Architecture
 
-Single-binary CLI tool (`cmd/gooser/main.go`) with no sub-packages. The entry point:
+CLI tool (`cmd/gooser/main.go`) backed by two internal packages:
 
-1. Reads a positional `[appname]` argument from `os.Args` (optional).
+- **`internal/gooser`** — Kubernetes dynamic client wrapper; `Client` exposes `List`, `Goose`, and `Twiddle`.
+- **`internal/tui`** — Bubbletea v2 TUI (`charmed.go` model, `theme.go` Catppuccin Frappé styles).
+
+Entry point flow:
+
+1. Reads a positional `[appname]` argument from `os.Args` (optional). Special values `version`, `--version`, `-v` print the build stamp and exit.
 2. Loads kubeconfig via `flag.String("kubeconfig", ...)` defaulting to `~/.kube/config`.
 3. Builds a `k8s.io/client-go/dynamic` client — intentionally generic, no ArgoCD SDK dependency.
-4. Lists all ArgoCD `Application` CRs in the `argocd` namespace via the `argoproj.io/v1alpha1/applications` GVR, printing name, sync status, and health status.
-5. If `appname` was provided, patches that application with the `argocd.argoproj.io/refresh: hard` annotation to trigger a hard refresh.
+4. Lists all ArgoCD `Application` CRs in the `argocd` namespace via the `argoproj.io/v1alpha1/applications` GVR.
+5. If no `appname` was provided, runs the TUI so the user can pick an app and choose an action (`goose` or `twiddle`). If `appname` was provided, defaults to `goose`.
+6. Executes the chosen action:
+   - **Goose** — patches the app with `argocd.argoproj.io/refresh: hard` to trigger a hard refresh.
+   - **Twiddle** — reads the current `spec.syncPolicy.automated` field and toggles it on (selfHeal + prune) or off (null-patches the field away).
 
 The dynamic client approach (rather than the ArgoCD typed client) keeps the dependency tree light and avoids the transitive conflicts that come with `github.com/argoproj/argo-cd/v2`.
+
+## TUI key bindings
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Move cursor up |
+| `↓` / `j` | Move cursor down |
+| `enter` / `g` | Goose selected app (hard refresh) |
+| `t` | Twiddle auto-sync for selected app |
+| `q` / `ctrl+c` | Quit |
+
+## Releases
+
+Releases are automated via GoReleaser v2 (`.goreleaser.yaml`). Artifacts: `tar.gz` archives for linux/darwin × amd64/arm64, SHA-256 checksums, SBOM (syft), and cosign keyless signatures. The GitHub Actions release workflow gates on the full `make ci` pipeline before publishing.
+
+```sh
+goreleaser release --snapshot --clean   # local dry run
+goreleaser check                        # validate config
+```
+
+Version, commit, and date are stamped into `main.version`, `main.commit`, `main.date` via `-ldflags` by both the Makefile and GoReleaser.
 
 ## Linting
 

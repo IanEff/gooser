@@ -9,9 +9,33 @@ Now with twiddling support: turn off yer sync polic options for maintenance or s
 around, turn 'em back on once you're through!
 
 ```
-gooser              # pick an app from the TUI, goose it
+gooser              # pick an app from the TUI, then choose what to do
 gooser my-app       # skip the TUI, goose it directly
+gooser version      # print version/commit/date
 ```
+
+## What it does
+
+### Goose (hard refresh)
+
+Force ArgoCD to drop its cache and re-pull from Git — useful when your gRPC connection
+has been flaky and ArgoCD is convinced everything is fine.
+
+### Twiddle (toggle auto-sync)
+
+Toggle the `spec.syncPolicy.automated` field on an application. Enabling it sets
+`selfHeal: true` and `prune: true`; disabling it removes the field entirely.
+Handy for temporarily freezing a noisy app without touching Git.
+
+### TUI key bindings
+
+| Key | Action |
+|-----|--------|
+| `↑` / `k` | Move up |
+| `↓` / `j` | Move down |
+| `enter` / `g` | Goose selected app |
+| `t` | Twiddle auto-sync |
+| `q` / `ctrl+c` | Quit |
 
 ## How it works
 
@@ -74,13 +98,27 @@ appResource.Patch(ctx, app, types.MergePatchType, patchBytes, metav1.PatchOption
 
 ArgoCD removes the annotation itself once the refresh completes.
 
+### Toggling auto-sync
+
+Twiddle reads the current `spec.syncPolicy.automated` field, then patches the opposite
+state back in. Enabling sets `{selfHeal: true, prune: true}`; disabling sends a `null`
+value which MergePatch translates into "remove this field":
+
+```go
+// enable
+automated = map[string]interface{}{"selfHeal": true, "prune": true}
+// disable — nil marshals to JSON null, which MergePatch removes
+automated = nil
+```
+
 ## Dependencies
 
 | Package | Why |
 |---------|-----|
 | `k8s.io/client-go/dynamic` | Dynamic Kubernetes client — no generated types needed |
 | `k8s.io/apimachinery` | GVR, `Unstructured`, patch types, list options |
-| `charm.land/bubbletea/v2` | Terminal UI for app selection |
+| `charm.land/bubbletea/v2` | Terminal UI framework |
+| `charm.land/lipgloss/v2` | TUI styling (Catppuccin Frappé colour scheme) |
 
 ## Build & run
 
