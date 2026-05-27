@@ -23,7 +23,7 @@ var (
 
 func main() {
 	if len(os.Args) > 2 {
-		fmt.Println("Usage: gooser [appname]")
+		fmt.Println("Usage: gooser [appname] [flags]")
 		fmt.Println("Leave empty to list all applications")
 		return
 	}
@@ -39,12 +39,13 @@ func main() {
 		return
 	}
 
-	var kubeconfig *string
-	if home := homedir.HomeDir(); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	defaultKubeconfig := os.Getenv("KUBECONFIG")
+	if defaultKubeconfig == "" {
+		if home := homedir.HomeDir(); home != "" {
+			defaultKubeconfig = filepath.Join(home, ".kube", "config")
+		}
 	}
+	kubeconfig := flag.String("kubeconfig", defaultKubeconfig, "path to the kubeconfig file (default: $KUBECONFIG or ~/.kube/config)")
 	flag.Parse()
 
 	client, err := gooser.NewClient(*kubeconfig)
@@ -57,6 +58,18 @@ func main() {
 	apps, err := client.List(ctx)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	found := false
+	for _, app := range apps {
+		if app.Name == appName {
+			found = true
+			break
+		}
+	}
+	if appName != "" && !found {
+		fmt.Fprintf(os.Stderr, "Application %q not found in Namespace argocd\n", appName)
 		os.Exit(1)
 	}
 
