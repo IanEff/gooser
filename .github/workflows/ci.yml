@@ -62,7 +62,7 @@ jobs:
       # drift before a tag is cut) and produces cross-platform binaries.
       # --skip=sign: keyless cosign needs the OIDC token only the tag-gated
       # release job is granted (id-token: write).
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --snapshot --clean --skip=sign
