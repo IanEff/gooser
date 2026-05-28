@@ -22,23 +22,6 @@ var (
 )
 
 func main() {
-	if len(os.Args) > 2 {
-		fmt.Println("Usage: gooser [appname] [flags]")
-		fmt.Println("Leave empty to list all applications")
-		return
-	}
-
-	appName := ""
-	if len(os.Args) == 2 {
-		appName = os.Args[1]
-	}
-
-	switch appName {
-	case "version", "--version", "-v":
-		fmt.Printf("gooser %s (commit %s, built %s)\n", version, commit, date)
-		return
-	}
-
 	defaultKubeconfig := os.Getenv("KUBECONFIG")
 	if defaultKubeconfig == "" {
 		if home := homedir.HomeDir(); home != "" {
@@ -47,6 +30,23 @@ func main() {
 	}
 	kubeconfig := flag.String("kubeconfig", defaultKubeconfig, "path to the kubeconfig file (default: $KUBECONFIG or ~/.kube/config)")
 	flag.Parse()
+
+	args := flag.Args()
+	if len(args) > 1 {
+		fmt.Fprintf(os.Stderr, "Usage: gooser [appname] [--kubeconfig path]\n")
+		os.Exit(1)
+	}
+
+	appName := ""
+	if len(args) == 1 {
+		appName = args[0]
+	}
+
+	switch appName {
+	case "version", "--version", "-v":
+		fmt.Printf("gooser %s (commit %s, built %s)\n", version, commit, date)
+		return
+	}
 
 	client, err := gooser.NewClient(*kubeconfig)
 	if err != nil {
