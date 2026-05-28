@@ -16,3 +16,6 @@ bin/
 
 # GoReleaser
 dist/
+
+# macos
+.DS_Store
