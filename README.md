@@ -5,7 +5,7 @@ acting flaky. Pulls your default local kubeconfig.
 
 For ephemeral clusters and impatient people.
 
-Now with twiddling support: turn off yer sync polic options for maintenance or screwin'
+Now with twiddling support: turn off yer sync policy options for maintenance or screwin'
 around, turn 'em back on once you're through!
 
 ![Gooser](assets/gooser.svg)
