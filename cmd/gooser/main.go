@@ -84,22 +84,17 @@ func main() {
 
 	switch result.Action {
 	case tui.ActionGoose:
-		err = client.Goose(ctx, result.Application)
-		fmt.Printf("Goosed %s. 🪿\n", result.Application)
+		if err = client.Goose(ctx, result.Application); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(tui.RenderGoosed(result.Application))
 	case tui.ActionTwiddle:
 		enabled, err := client.Twiddle(ctx, result.Application)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		verb := "Disabled"
-		if enabled {
-			verb = "Enabled"
-		}
-		fmt.Printf("%s auto-sync for %s.\n", verb, result.Application)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		fmt.Println(tui.RenderTwiddle(result.Application, enabled))
 	}
 }

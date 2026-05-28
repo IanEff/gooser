@@ -11,7 +11,7 @@ make test         # go test ./...
 make race         # go test -race ./...
 make coverage     # coverage report
 make lint         # golangci-lint run
-make fmt          # gofmt -w
+make fmt          # go fmt ./...
 make fmt-check    # fails if any files are unformatted
 make vet          # go vet ./...
 make ci           # fmt-check → vet → lint → test → build (full pipeline, matches GitHub Actions)
@@ -34,10 +34,10 @@ CLI tool (`cmd/gooser/main.go`) backed by two internal packages:
 Entry point flow:
 
 1. Reads a positional `[appname]` argument from `os.Args` (optional). Special values `version`, `--version`, `-v` print the build stamp and exit.
-2. Loads kubeconfig via `flag.String("kubeconfig", ...)` defaulting to `~/.kube/config`.
+2. Loads kubeconfig via `flag.String("kubeconfig", ...)` defaulting to `$KUBECONFIG` env var, then `~/.kube/config`.
 3. Builds a `k8s.io/client-go/dynamic` client — intentionally generic, no ArgoCD SDK dependency.
 4. Lists all ArgoCD `Application` CRs in the `argocd` namespace via the `argoproj.io/v1alpha1/applications` GVR.
-5. If no `appname` was provided, runs the TUI so the user can pick an app and choose an action (`goose` or `twiddle`). If `appname` was provided, defaults to `goose`.
+5. If `appname` was provided, validates it exists in the listed apps — exits with an error if not found. If no `appname` was provided, runs the TUI so the user can pick an app and choose an action (`goose` or `twiddle`). If `appname` was provided, defaults to `goose`.
 6. Executes the chosen action:
    - **Goose** — patches the app with `argocd.argoproj.io/refresh: hard` to trigger a hard refresh.
    - **Twiddle** — reads the current `spec.syncPolicy.automated` field and toggles it on (selfHeal + prune) or off (null-patches the field away).
