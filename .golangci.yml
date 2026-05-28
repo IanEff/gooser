@@ -7,16 +7,12 @@ linters:
     - misspell
     - errorlint
     - revive
+    - errcheck
   settings:
     staticcheck:
       checks: ["all"]
   exclusions:
     warn-unused: true
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
 
 formatters:
   enable:
