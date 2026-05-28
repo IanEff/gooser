@@ -13,7 +13,7 @@ around, turn 'em back on once you're through!
 ```
 gooser              # pick an app from the TUI, then choose what to do
 gooser my-app       # skip the TUI, goose it directly
-gooser version      # print version/commit/date
+gooser --version    # print version/commit/date
 ```
 
 ## What it does

@@ -33,7 +33,7 @@ CLI tool (`cmd/gooser/main.go`) backed by two internal packages:
 
 Entry point flow:
 
-1. Reads a positional `[appname]` argument from `os.Args` (optional). Special values `version`, `--version`, `-v` print the build stamp and exit.
+1. Reads a positional `[appname]` argument from `os.Args` (optional). Pass `--version` to print the build stamp and exit.
 2. Loads kubeconfig via `flag.String("kubeconfig", ...)` defaulting to `$KUBECONFIG` env var, then `~/.kube/config`.
 3. Builds a `k8s.io/client-go/dynamic` client — intentionally generic, no ArgoCD SDK dependency.
 4. Lists all ArgoCD `Application` CRs in the `argocd` namespace via the `argoproj.io/v1alpha1/applications` GVR.

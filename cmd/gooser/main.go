@@ -28,24 +28,22 @@ func main() {
 			defaultKubeconfig = filepath.Join(home, ".kube", "config")
 		}
 	}
+
 	kubeconfig := flag.String("kubeconfig", defaultKubeconfig, "path to the kubeconfig file (default: $KUBECONFIG or ~/.kube/config)")
+	showVersion := flag.Bool("version", false, "print version and exit")
+
 	flag.Parse()
 
-	args := flag.Args()
-	if len(args) > 1 {
-		fmt.Fprintf(os.Stderr, "Usage: gooser [appname] [--kubeconfig path]\n")
-		os.Exit(1)
+	if *showVersion {
+		fmt.Printf("gooser %s (commit %s, built %s)\n", version, commit, date)
+		return
 	}
+
+	args := flag.Args()
 
 	appName := ""
 	if len(args) == 1 {
 		appName = args[0]
-	}
-
-	switch appName {
-	case "version", "--version", "-v":
-		fmt.Printf("gooser %s (commit %s, built %s)\n", version, commit, date)
-		return
 	}
 
 	client, err := gooser.NewClient(*kubeconfig)
