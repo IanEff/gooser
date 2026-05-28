@@ -104,15 +104,15 @@ func (c *Client) Twiddle(ctx context.Context, app string) (bool, error) {
 		return false, fmt.Errorf("cannot read sync policy: %w", err)
 	}
 
-	var automated interface{}
+	var payload interface{}
 	if !wasEnabled {
-		automated = map[string]interface{}{"selfHeal": true, "prune": true}
+		payload = map[string]interface{}{"selfHeal": true, "prune": true}
 	} // else: nil — MergePatch with null removes the field, disabling auto-sync.
 
 	patchPayload := map[string]interface{}{
 		"spec": map[string]interface{}{
 			"syncPolicy": map[string]interface{}{
-				"automated": automated,
+				"automated": payload,
 			},
 		},
 	}

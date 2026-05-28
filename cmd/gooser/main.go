@@ -87,8 +87,11 @@ func main() {
 		err = client.Goose(ctx, result.Application)
 		fmt.Printf("Goosed %s. 🪿\n", result.Application)
 	case tui.ActionTwiddle:
-		var enabled bool
-		enabled, err = client.Twiddle(ctx, result.Application)
+		enabled, err := client.Twiddle(ctx, result.Application)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		verb := "Disabled"
 		if enabled {
 			verb = "Enabled"
