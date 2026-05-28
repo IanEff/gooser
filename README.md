@@ -1,12 +1,14 @@
 # gooser 🪿
 
 A little cli app to goose ArgoCD to refresh Applications when your gRPC connection's
-acting flaky.  Pulls your default local kubeconfig.
+acting flaky. Pulls your default local kubeconfig.
 
 For ephemeral clusters and impatient people.
 
 Now with twiddling support: turn off yer sync polic options for maintenance or screwin'
 around, turn 'em back on once you're through!
+
+![Gooser](assets/gooser.svg)
 
 ```
 gooser              # pick an app from the TUI, then choose what to do
@@ -29,13 +31,13 @@ Handy for temporarily freezing a noisy app without touching Git.
 
 ### TUI key bindings
 
-| Key | Action |
-|-----|--------|
-| `↑` / `k` | Move up |
-| `↓` / `j` | Move down |
-| `enter` / `g` | Goose selected app |
-| `t` | Twiddle auto-sync |
-| `q` / `ctrl+c` | Quit |
+| Key            | Action             |
+| -------------- | ------------------ |
+| `↑` / `k`      | Move up            |
+| `↓` / `j`      | Move down          |
+| `enter` / `g`  | Goose selected app |
+| `t`            | Twiddle auto-sync  |
+| `q` / `ctrl+c` | Quit               |
 
 ## How it works
 
@@ -47,10 +49,10 @@ gooser talks to the Kubernetes API directly using a **dynamic client**.
 
 Every resource in Kubernetes is identified by three coordinates:
 
-| Field | Value |
-|-------|-------|
-| **Group** | `argoproj.io` |
-| **Version** | `v1alpha1` |
+| Field        | Value          |
+| ------------ | -------------- |
+| **Group**    | `argoproj.io`  |
+| **Version**  | `v1alpha1`     |
 | **Resource** | `applications` |
 
 Together these form a `schema.GroupVersionResource` — the GVR. Given one, the dynamic
@@ -113,12 +115,12 @@ automated = nil
 
 ## Dependencies
 
-| Package | Why |
-|---------|-----|
+| Package                    | Why                                                   |
+| -------------------------- | ----------------------------------------------------- |
 | `k8s.io/client-go/dynamic` | Dynamic Kubernetes client — no generated types needed |
-| `k8s.io/apimachinery` | GVR, `Unstructured`, patch types, list options |
-| `charm.land/bubbletea/v2` | Terminal UI framework |
-| `charm.land/lipgloss/v2` | TUI styling (Catppuccin Frappé colour scheme) |
+| `k8s.io/apimachinery`      | GVR, `Unstructured`, patch types, list options        |
+| `charm.land/bubbletea/v2`  | Terminal UI framework                                 |
+| `charm.land/lipgloss/v2`   | TUI styling (Catppuccin Frappé colour scheme)         |
 
 ## Build & run
 
