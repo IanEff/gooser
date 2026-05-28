@@ -80,6 +80,9 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		if result.Application == "" {
+			os.Exit(0)
+		}
 	}
 
 	switch result.Action {
