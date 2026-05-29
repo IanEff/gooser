@@ -40,6 +40,10 @@ func main() {
 	}
 
 	args := flag.Args()
+	if len(args) > 1 {
+		fmt.Fprintf(os.Stderr, "Usage: gooser [appname] [--kubeconfig path]\n")
+		os.Exit(1)
+	}
 
 	appName := ""
 	if len(args) == 1 {
