@@ -36,11 +36,13 @@ func initialModel(apps []gooser.Application) model {
 	}
 }
 
+// Init is called when the TUI is first initialized.
 func (m model) Init() tea.Cmd {
 	// From the docs: 'Just return `nil`, which means "no I/O right now, please"'
 	return nil
 }
 
+// Update handles incoming messages from the TUI.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
@@ -73,6 +75,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View renders the TUI view.
 func (m model) View() tea.View {
 	if m.quitting {
 		return tea.NewView("")

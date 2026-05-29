@@ -91,7 +91,6 @@ func (c *Client) Goose(ctx context.Context, app string) error {
 
 // Twiddle toggles automated sync policy for the named ArgoCD application,
 // reading the current state from the resource and returning the new state
-// (true means automated sync is now enabled).
 func (c *Client) Twiddle(ctx context.Context, app string) (bool, error) {
 	appResource := c.dyn.Resource(applicationGVR).Namespace(c.ns)
 

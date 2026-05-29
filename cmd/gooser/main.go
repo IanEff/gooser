@@ -13,8 +13,6 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// Stamped at link time via -ldflags "-X main.version=… -X main.commit=… -X main.date=…".
-// GoReleaser and the Makefile both set these; the defaults apply to `go build`/`go run`.
 var (
 	version = "dev"
 	commit  = "none"
