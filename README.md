@@ -129,3 +129,8 @@ make run      # go run ./cmd/gooser
 make build    # produces bin/gooser
 make ci       # fmt-check → vet → lint → test → build
 ```
+
+## 🎨 Theme
+
+The TUI uses the [Catppuccin Frappé](https://github.com/catppuccin/catppuccin) color palette.  
+Catppuccin is licensed under the [MIT License](https://github.com/catppuccin/catppuccin/blob/main/LICENSE).
