@@ -21,16 +21,16 @@ var errInjected = errors.New("injected API error")
 // makeApp builds a minimal ArgoCD Application as an Unstructured object.
 func makeApp(name, sync, health string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "argoproj.io/v1alpha1",
 			"kind":       "Application",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      name,
 				"namespace": "argocd",
 			},
-			"status": map[string]interface{}{
-				"sync":   map[string]interface{}{"status": sync},
-				"health": map[string]interface{}{"status": health},
+			"status": map[string]any{
+				"sync":   map[string]any{"status": sync},
+				"health": map[string]any{"status": health},
 			},
 		},
 	}
@@ -50,7 +50,7 @@ func firstPatch(fd *fake.FakeDynamicClient) k8stesting.PatchAction {
 // i.e. auto-sync is currently enabled.
 func appWithAutoSync(name string) *unstructured.Unstructured {
 	u := makeApp(name, "Synced", "Healthy")
-	_ = unstructured.SetNestedMap(u.Object, map[string]interface{}{
+	_ = unstructured.SetNestedMap(u.Object, map[string]any{
 		"selfHeal": true,
 		"prune":    true,
 	}, "spec", "syncPolicy", "automated")
@@ -96,8 +96,8 @@ func TestAppFrom(t *testing.T) {
 		{
 			name: "missing status block",
 			input: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{"name": "bare"},
+				Object: map[string]any{
+					"metadata": map[string]any{"name": "bare"},
 				},
 			},
 			want: Application{Name: "bare", Sync: "", Health: ""},
@@ -105,10 +105,10 @@ func TestAppFrom(t *testing.T) {
 		{
 			name: "partial status — sync only",
 			input: unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"metadata": map[string]interface{}{"name": "half"},
-					"status": map[string]interface{}{
-						"sync": map[string]interface{}{"status": "OutOfSync"},
+				Object: map[string]any{
+					"metadata": map[string]any{"name": "half"},
+					"status": map[string]any{
+						"sync": map[string]any{"status": "OutOfSync"},
 					},
 				},
 			},
@@ -218,7 +218,7 @@ func TestGoose(t *testing.T) {
 			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
 		}
 
-		var body map[string]interface{}
+		var body map[string]any
 		if err := json.Unmarshal(pa.GetPatch(), &body); err != nil {
 			t.Fatalf("unmarshal patch body: %v", err)
 		}
@@ -262,7 +262,7 @@ func TestTwiddle(t *testing.T) {
 			t.Errorf("patch type = %v, want MergePatchType", pa.GetPatchType())
 		}
 
-		var body map[string]interface{}
+		var body map[string]any
 		if err := json.Unmarshal(pa.GetPatch(), &body); err != nil {
 			t.Fatalf("unmarshal patch body: %v", err)
 		}
